@@ -13,7 +13,10 @@ from .utils.text_to_image import text_to_image
 
 
 @register(
-    "astrbot_plugin_blacklist_tools", "ctrlkk", "允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息，自动拉黑！", "1.0.0"
+    "astrbot_plugin_blacklist_tools",
+    "ctrlkk",
+    "允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息，自动拉黑！",
+    "1.0.0",
 )
 class MyPlugin(Star):
     def __init__(self, context: Context):
@@ -57,7 +60,34 @@ class MyPlugin(Star):
         """)
         await self.db.commit()
 
-    @filter.event_message_type(filter.EventMessageType.ALL, property=sys.maxsize-1)
+    def _format_datetime(self, iso_datetime_str, show_remaining=False):
+        """统一格式化日期时间字符串"""
+        if not iso_datetime_str:
+            return "永久"
+        try:
+            datetime_obj = datetime.fromisoformat(iso_datetime_str)
+            formatted_time = datetime_obj.strftime("%Y-%m-%d %H:%M:%S")
+            if show_remaining:
+                if datetime.now() > datetime_obj:
+                    return "已过期"
+                else:
+                    remaining_time = datetime_obj - datetime.now()
+                    days = remaining_time.days
+                    hours, remainder = divmod(remaining_time.seconds, 3600)
+                    minutes, _ = divmod(remainder, 60)
+                    return (
+                        f"{formatted_time} (剩余: {days}天 {hours}小时 {minutes}分钟)"
+                    )
+            else:
+                if datetime.now() > datetime_obj:
+                    return "已过期"
+                else:
+                    return formatted_time
+        except Exception as e:
+            logger.error(f"格式化日期时间时出错：{e}")
+            return "格式错误"
+
+    @filter.event_message_type(filter.EventMessageType.ALL, property=sys.maxsize - 1)
     async def on_all_message(self, event: AstrMessageEvent):
         sender_id = event.get_sender_id()
         try:
@@ -127,32 +157,17 @@ class MyPlugin(Star):
             )
             users = await cursor.fetchall()
 
-            # 构建Linux风格的文本
             result = "黑名单列表\n"
             result += "=" * 60 + "\n\n"
 
-            # 表头
             result += f"{'ID':<20} {'加入时间':<20} {'过期时间':<20} {'原因':<20}\n"
             result += "-" * 80 + "\n"
 
             for user in users:
                 user_id, ban_time, expire_time, reason = user
-                ban_time_str = datetime.fromisoformat(ban_time).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-
-                if expire_time:
-                    expire_datetime = datetime.fromisoformat(expire_time)
-                    if datetime.now() > expire_datetime:
-                        expire_time_str = "已过期"
-                    else:
-                        expire_time_str = expire_datetime.strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    expire_time_str = "永久"
-
+                ban_time_str = self._format_datetime(ban_time)
+                expire_time_str = self._format_datetime(expire_time)
                 reason_str = reason if reason else "无"
-
-                # 使用Linux风格的表格格式
                 result += f"{user_id:<20} {ban_time_str:<20} {expire_time_str:<20} {reason_str:<20}\n"
 
             # 添加分页信息
@@ -160,13 +175,11 @@ class MyPlugin(Star):
             result += f"第 {page}/{total_pages} 页，共 {total_count} 条记录\n"
             result += f"每页显示 {page_size} 条记录\n"
 
-            # 添加翻页提示
             if page > 1:
                 result += f"使用 `/black ls {page - 1} {page_size}` 查看上一页\n"
             if page < total_pages:
                 result += f"使用 `/black ls {page + 1} {page_size}` 查看下一页\n"
 
-            # 将文本转换为图片（异步）
             image_data = await text_to_image(result)
             if image_data:
                 yield event.chain_result([Comp.Image.fromBase64(image_data)])
@@ -282,24 +295,8 @@ class MyPlugin(Star):
                 return
 
             user_id, ban_time, expire_time, reason = user
-            ban_time_str = datetime.fromisoformat(ban_time).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-            if expire_time:
-                expire_datetime = datetime.fromisoformat(expire_time)
-                if datetime.now() > expire_datetime:
-                    expire_time_str = "已过期"
-                else:
-                    expire_time_str = expire_datetime.strftime("%Y-%m-%d %H:%M:%S")
-                    remaining_time = expire_datetime - datetime.now()
-                    days = remaining_time.days
-                    hours, remainder = divmod(remaining_time.seconds, 3600)
-                    minutes, _ = divmod(remainder, 60)
-                    expire_time_str += f" (剩余: {days}天 {hours}小时 {minutes}分钟)"
-            else:
-                expire_time_str = "永久"
-
+            ban_time_str = self._format_datetime(ban_time)
+            expire_time_str = self._format_datetime(expire_time, show_remaining=True)
             reason_str = reason if reason else "无"
 
             result = f"用户 {user_id} 的黑名单信息：\n"
@@ -308,7 +305,6 @@ class MyPlugin(Star):
             result += f"过期时间: {expire_time_str}\n"
             result += f"原因: {reason_str}\n"
 
-            # 将文本转换为图片（异步）
             image_data = await text_to_image(result)
             if image_data:
                 yield event.chain_result([Comp.Image.fromBase64(image_data)])
