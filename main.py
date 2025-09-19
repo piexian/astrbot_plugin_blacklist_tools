@@ -316,7 +316,7 @@ class MyPlugin(Star):
 
     @filter.llm_tool(name="add_to_blacklist")
     async def add_to_blacklist(
-        self, user_id: str, duration: int = 0, reason: str = ""
+        self, event: AstrMessageEvent, user_id: str, duration: int = 0, reason: str = ""
     ) -> MessageEventResult:
         """
         Add a user to the blacklist. The user's messages will be ignored.
@@ -365,7 +365,9 @@ class MyPlugin(Star):
             return "添加用户到黑名单时出错"
 
     @filter.llm_tool(name="remove_from_blacklist")
-    async def remove_from_blacklist(self, user_id: str) -> MessageEventResult:
+    async def remove_from_blacklist(
+        self, event: AstrMessageEvent, user_id: str
+    ) -> MessageEventResult:
         """
         Remove a user from the blacklist.
         Args:
