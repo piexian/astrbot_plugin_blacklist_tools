@@ -1,0 +1,14 @@
+{
+  "allow_permanent_blacklist": {
+    "type": "bool",
+    "description": "是否允许永久黑名单",
+    "hint": "启用后，只有管理员可以将用户永久加入黑名单。默认为 true",
+    "default": true
+  },
+  "max_blacklist_duration": {
+    "type": "int",
+    "description": "非授权禁言最大时长（秒）",
+    "hint": "自动拉黑允许的最长时间",
+    "default": 86400
+  }
+}

@@ -1,9 +1,122 @@
-# helloworld
+# AstrBot 黑名单工具插件
 
-AstrBot 插件模板
+一个为 AstrBot 设计的黑名单管理插件，允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息。
 
-A template plugin for AstrBot plugin feature
+## 功能特性
 
-# 支持
+- 🚫 **黑名单管理**：将用户添加到黑名单，阻止他们的消息
+- ⏰ **临时/永久黑名单**：支持设置黑名单时长或永久拉黑
+- 🛠️ **管理员命令**：提供完整的管理员命令集来管理黑名单
+- 🤖 **LLM 工具**：允许 LLM 直接调用工具拉黑用户
+- 📊 **分页显示**：支持分页查看黑名单列表
+- 🖼️ **图片输出**：黑名单列表以图片形式展示，更美观
+- 🔄 **自动过期**：临时黑名单到期后自动移除
 
-[帮助文档](https://astrbot.app)
+## 配置
+
+插件支持以下配置选项（在插件配置文件中设置）：
+
+```yaml
+max_blacklist_duration: 86400  # 黑名单最长时长（秒），默认为1天
+allow_permanent_blacklist: true  # 是否允许永久黑名单，默认为true
+```
+
+## 使用方法
+
+### 管理员命令
+
+所有管理员命令都需要管理员权限，可以使用 `/black` 或 `/bl` 作为命令前缀。
+
+#### 添加用户到黑名单
+
+```
+/black add <用户ID> [时长(秒)] [原因]
+```
+
+示例：
+```
+/black add user123 3600 发送垃圾信息
+/black add user456 0 恶意攻击（永久拉黑）
+/black add user789 （使用默认时长）
+```
+
+#### 从黑名单移除用户
+
+```
+/black rm <用户ID>
+```
+
+示例：
+```
+/black rm user123
+```
+
+#### 查看黑名单列表
+
+```
+/black ls [页码] [每页数量]
+```
+
+示例：
+```
+/black ls          # 查看第1页，每页10条
+/black ls 2        # 查看第2页，每页10条
+/black ls 1 20     # 查看第1页，每页20条
+```
+
+#### 查看特定用户信息
+
+```
+/black info <用户ID>
+```
+
+示例：
+```
+/black info user123
+```
+
+#### 清空黑名单
+
+```
+/black clear
+```
+
+### LLM 工具
+
+插件提供了两个 LLM 工具，允许 LLM 直接管理黑名单：
+
+#### add_to_blacklist
+
+将用户添加到黑名单：
+
+```python
+add_to_blacklist(user_id, duration=0, reason="")
+```
+
+参数：
+- `user_id` (string): 要添加到黑名单的用户ID
+- `duration` (number): 黑名单时长（秒），设为0表示永久拉黑
+- `reason` (string): 拉黑原因
+
+#### remove_from_blacklist
+
+从黑名单移除用户：
+
+```python
+remove_from_blacklist(user_id)
+```
+
+参数：
+- `user_id` (string): 要从黑名单移除的用户ID
+
+## 工作原理
+
+1. **消息过滤**：插件会检查所有收到的消息，如果发送者在黑名单中，则阻止该消息
+2. **自动过期**：对于临时黑名单，插件会检查过期时间，到期后自动移除
+3. **数据库存储**：所有黑名单数据存储在 SQLite 数据库中，确保重启后数据不丢失
+
+## 注意事项
+
+- 只有管理员可以使用黑名单管理命令
+- 如果设置了 `max_blacklist_duration`，则黑名单时长不能超过该值
+- 如果 `allow_permanent_blacklist` 为 false，则无法添加永久黑名单
