@@ -60,13 +60,25 @@ class MyPlugin(Star):
         """)
         await self.db.commit()
 
-    def _format_datetime(self, iso_datetime_str, show_remaining=False):
-        """统一格式化日期时间字符串"""
+    def _format_datetime(
+        self, iso_datetime_str, show_remaining=False, check_expire=False
+    ):
+        """统一格式化日期时间字符串
+        Args:
+            iso_datetime_str: ISO格式的日期时间字符串
+            show_remaining: 是否显示剩余时间
+            check_expire: 是否检查是否过期（仅对过期时间有效）
+        """
         if not iso_datetime_str:
             return "永久"
         try:
             datetime_obj = datetime.fromisoformat(iso_datetime_str)
             formatted_time = datetime_obj.strftime("%Y-%m-%d %H:%M:%S")
+
+            if check_expire:
+                if datetime.now() > datetime_obj:
+                    return "已过期"
+
             if show_remaining:
                 if datetime.now() > datetime_obj:
                     return "已过期"
@@ -79,10 +91,7 @@ class MyPlugin(Star):
                         f"{formatted_time} (剩余: {days}天 {hours}小时 {minutes}分钟)"
                     )
             else:
-                if datetime.now() > datetime_obj:
-                    return "已过期"
-                else:
-                    return formatted_time
+                return formatted_time
         except Exception as e:
             logger.error(f"格式化日期时间时出错：{e}")
             return "格式错误"
@@ -129,7 +138,6 @@ class MyPlugin(Star):
             page_size: 每页显示的数量
         """
         try:
-            # 获取总记录数
             cursor = await self.db.execute("SELECT COUNT(*) FROM blacklist")
             total_count = (await cursor.fetchone())[0]
 
@@ -140,17 +148,13 @@ class MyPlugin(Star):
             # 计算分页参数
             offset = (page - 1) * page_size
             total_pages = (total_count + page_size - 1) // page_size
-
-            # 确保页码在有效范围内
             if page < 1:
                 page = 1
             elif page > total_pages:
                 page = total_pages
 
-            # 重新计算offset
             offset = (page - 1) * page_size
 
-            # 获取当前页的数据
             cursor = await self.db.execute(
                 "SELECT * FROM blacklist ORDER BY ban_time DESC LIMIT ? OFFSET ?",
                 (page_size, offset),
@@ -165,12 +169,11 @@ class MyPlugin(Star):
 
             for user in users:
                 user_id, ban_time, expire_time, reason = user
-                ban_time_str = self._format_datetime(ban_time)
-                expire_time_str = self._format_datetime(expire_time)
+                ban_time_str = self._format_datetime(ban_time, check_expire=False)
+                expire_time_str = self._format_datetime(expire_time, check_expire=True)
                 reason_str = reason if reason else "无"
                 result += f"{user_id:<20} {ban_time_str:<20} {expire_time_str:<20} {reason_str:<20}\n"
 
-            # 添加分页信息
             result += "-" * 80 + "\n"
             result += f"第 {page}/{total_pages} 页，共 {total_count} 条记录\n"
             result += f"每页显示 {page_size} 条记录\n"
@@ -295,8 +298,10 @@ class MyPlugin(Star):
                 return
 
             user_id, ban_time, expire_time, reason = user
-            ban_time_str = self._format_datetime(ban_time)
-            expire_time_str = self._format_datetime(expire_time, show_remaining=True)
+            ban_time_str = self._format_datetime(ban_time, check_expire=False)
+            expire_time_str = self._format_datetime(
+                expire_time, show_remaining=True, check_expire=True
+            )
             reason_str = reason if reason else "无"
 
             result = f"用户 {user_id} 的黑名单信息：\n"
@@ -320,6 +325,7 @@ class MyPlugin(Star):
     ) -> MessageEventResult:
         """
         Add a user to the blacklist. The user's messages will be ignored.
+        Use this when you've completely lost goodwill toward the user or no longer wish to receive messages from them.
         Args:
             user_id(string): The ID of the user to be added to the blacklist
             duration(number): The duration of the blacklist in seconds. Set to 0 for permanent blacklist
