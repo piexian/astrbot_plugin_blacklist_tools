@@ -6,6 +6,7 @@ from astrbot.api.event import filter
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 import astrbot.api.message_components as Comp
+from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.message.message_event_result import MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.star.star_tools import StarTools
@@ -19,21 +20,18 @@ from .utils.text_to_image import text_to_image
     "1.0.0",
 )
 class MyPlugin(Star):
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
-        self.config = context.get_config()
         data_dir = StarTools.get_data_dir()
         self.db_path = path.join(data_dir, "blacklist.db")
         self.db = None
 
         # 黑名单最长时长
-        self.max_blacklist_duration = self.config.get(
+        self.max_blacklist_duration = config.get(
             "max_blacklist_duration", 1 * 24 * 60 * 60
         )
         # 是否允许永久黑名单
-        self.allow_permanent_blacklist = self.config.get(
-            "allow_permanent_blacklist", True
-        )
+        self.allow_permanent_blacklist = config.get("allow_permanent_blacklist", True)
 
     async def initialize(self):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
