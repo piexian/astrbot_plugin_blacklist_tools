@@ -17,7 +17,7 @@ from .utils.text_to_image import text_to_image
     "astrbot_plugin_blacklist_tools",
     "ctrlkk",
     "允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息，自动拉黑！",
-    "1.0.0",
+    "1.1",
 )
 class MyPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
