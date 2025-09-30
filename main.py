@@ -17,7 +17,7 @@ from .database import BlacklistDatabase
     "astrbot_plugin_blacklist_tools",
     "ctrlkk",
     "允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息，自动拉黑！",
-    "1.2",
+    "1.3",
 )
 class MyPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -86,19 +86,14 @@ class MyPlugin(Star):
 
     @filter.event_message_type(filter.EventMessageType.ALL, property=sys.maxsize - 1)
     async def on_all_message(self, event: AstrMessageEvent):
-        if (not event.is_wake):
+        if not event.is_at_or_wake_command:
             return
-        sender_name = event.get_sender_name()
         sender_id = event.get_sender_id()
         try:
             if await self.db.is_user_blacklisted(sender_id):
                 event.stop_event()
                 if self.show_blacklist_status:
-                    await event.send(
-                        MessageChain()
-                        .at(sender_name, sender_id)
-                        .message(self.blacklist_message)
-                    )
+                    await event.send(MessageChain().message(self.blacklist_message))
 
         except Exception as e:
             logger.error(f"检查黑名单时出错：{e}")
