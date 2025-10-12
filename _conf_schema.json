@@ -2,23 +2,32 @@
   "max_blacklist_duration": {
     "type": "int",
     "default": 86400,
-    "description": "黑名单最长时长（秒），仅对LLM工具生效，管理员命令不受限制",
-    "minimum": 1
+    "minimum": 1,
+    "description": "黑名单最长时长",
+    "hint": "仅对LLM工具生效，管理员命令不受限制"
   },
   "allow_permanent_blacklist": {
     "type": "bool",
     "default": true,
-    "description": "是否允许LLM设置永久黑名单，管理员命令不受限制"
+    "description": "允许永久黑名单",
+    "hint": "仅对LLM工具生效，管理员命令不受限制"
+  },
+  "allow_blacklist_admin": {
+    "type": "bool",
+    "default": false,
+    "description": "允许拉黑管理员",
+    "hint": "开启时时也会阻止管理员的消息"
   },
   "show_blacklist_status": {
     "type": "bool",
     "default": false,
-    "description": "是否向被拉黑用户显示拉黑状态"
+    "description": "向被拉黑用户显示拉黑状态"
   },
   "blacklist_message": {
     "type": "string",
     "default": "[连接已中断]",
-    "description": "黑名单提示消息，当show_blacklist_status为true时显示给被拉黑用户"
+    "description": "黑名单提示消息",
+    "hint": "当show_blacklist_status为true时显示给被拉黑用户"
   },
   "auto_delete_expired_after": {
     "type": "int",

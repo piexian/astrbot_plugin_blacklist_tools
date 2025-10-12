@@ -17,7 +17,7 @@ from .database import BlacklistDatabase
     "astrbot_plugin_blacklist_tools",
     "ctrlkk",
     "允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息，自动拉黑！",
-    "1.4",
+    "1.5",
 )
 class MyPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -37,6 +37,8 @@ class MyPlugin(Star):
         self.blacklist_message = config.get("blacklist_message", "[连接已中断]")
         # 自动删除过期多久的黑名单
         self.auto_delete_expired_after = config.get("auto_delete_expired_after", 86400)
+        # 是否允许拉黑管理员
+        self.allow_blacklist_admin = config.get("allow_blacklist_admin", False)
 
         self.db = BlacklistDatabase(self.db_path, self.auto_delete_expired_after)
 
@@ -88,8 +90,12 @@ class MyPlugin(Star):
     async def on_all_message(self, event: AstrMessageEvent):
         if not event.is_at_or_wake_command:
             return
+
         sender_id = event.get_sender_id()
         try:
+            if not self.allow_blacklist_admin:
+                return
+
             if await self.db.is_user_blacklisted(sender_id):
                 event.stop_event()
                 if not event.get_messages():
@@ -259,17 +265,17 @@ class MyPlugin(Star):
 
     @filter.llm_tool(name="add_to_blacklist")
     async def add_to_blacklist(
-        self, event: AstrMessageEvent, user_id: str, duration: int = 0, reason: str = ""
+        self, event: AstrMessageEvent, duration: int = 0, reason: str = ""
     ) -> MessageEventResult:
         """
         Add a user to the blacklist. The user's messages will be ignored.
         Use this when you've completely lost goodwill toward the user or no longer wish to receive messages from them.
         Args:
-            user_id(string): The ID of the user to be added to the blacklist
             duration(number): The duration of the blacklist in seconds. Set to 0 for permanent blacklist
             reason(string): The reason for adding the user to the blacklist
         """
         try:
+            user_id = event.get_sender_id()
             ban_time = datetime.now().isoformat()
             expire_time = None
             actual_duration = duration
@@ -287,17 +293,12 @@ class MyPlugin(Star):
                     datetime.now() + timedelta(seconds=actual_duration)
                 ).isoformat()
 
-            if await self.db.add_user(user_id, ban_time, expire_time, reason):
-                if actual_duration > 0:
-                    logger.info(
-                        f"用户 {user_id} 已被加入黑名单，时长 {actual_duration} 秒，原因：{reason}"
-                    )
-                    return f"用户 {user_id} 已被加入黑名单。"
-                else:
-                    logger.info(f"用户 {user_id} 已被永久加入黑名单，原因：{reason}")
-                    return f"用户 {user_id} 已被永久加入黑名单。"
+            await self.db.add_user(user_id, ban_time, expire_time, reason)
+
+            if actual_duration > 0:
+                return f"用户 {user_id} 已被加入黑名单，时长 {actual_duration} 秒"
             else:
-                return "添加用户到黑名单时出错"
+                return f"用户 {user_id} 已被永久加入黑名单"
 
         except Exception as e:
             logger.error(f"添加用户 {user_id} 到黑名单时出错：{e}")
