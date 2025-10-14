@@ -17,7 +17,7 @@ from .database import BlacklistDatabase
     "astrbot_plugin_blacklist_tools",
     "ctrlkk",
     "允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息，自动拉黑！",
-    "1.5",
+    "1.6",
 )
 class MyPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -93,7 +93,7 @@ class MyPlugin(Star):
 
         sender_id = event.get_sender_id()
         try:
-            if not self.allow_blacklist_admin:
+            if event.is_admin() and not self.allow_blacklist_admin:
                 return
 
             if await self.db.is_user_blacklisted(sender_id):
@@ -263,16 +263,17 @@ class MyPlugin(Star):
             logger.error(f"查看用户 {user_id} 黑名单信息时出错：{e}")
             yield event.plain_result("查看用户黑名单信息时出错。")
 
-    @filter.llm_tool(name="add_to_blacklist")
-    async def add_to_blacklist(
+    @filter.llm_tool(name="block_user")
+    async def add_to_block_user(
         self, event: AstrMessageEvent, duration: int = 0, reason: str = ""
     ) -> MessageEventResult:
         """
-        Add a user to the blacklist. The user's messages will be ignored.
-        Use this when you've completely lost goodwill toward the user or no longer wish to receive messages from them.
+        Block a user. All messages from this user will be ignored immediately.
+        Use this function when you decide to blacklist a user and cease all contact.
+
         Args:
-            duration(number): The duration of the blacklist in seconds. Set to 0 for permanent blacklist
-            reason(string): The reason for adding the user to the blacklist
+            duration (number): The block duration in seconds. Use 0 to make it permanent.
+            reason (string): The reason for blocking this user.
         """
         try:
             user_id = event.get_sender_id()
