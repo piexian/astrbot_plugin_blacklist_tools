@@ -267,7 +267,7 @@ class MyPlugin(Star):
 
 
 
-    @filter.llm_tool(name="block_user")
+    @filter.llm_tool(name="add_to_block_user")
     async def add_to_block_user(
         self, event: AstrMessageEvent, duration: str = "0", reason: str = ""
     ) -> AsyncGenerator[MessageEventResult, None]:
