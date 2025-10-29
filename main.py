@@ -19,7 +19,7 @@ from .database import BlacklistDatabase
     "astrbot_plugin_blacklist_tools",
     "ctrlkk",
     "允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息，自动拉黑！",
-    "1.6",
+    "1.6.1",
 )
 class MyPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
