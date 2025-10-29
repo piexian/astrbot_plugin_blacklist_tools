@@ -1,6 +1,8 @@
 from os import path
 import sys
 from datetime import datetime, timedelta
+from typing import AsyncGenerator  
+
 from astrbot.api.event import filter
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
@@ -263,26 +265,39 @@ class MyPlugin(Star):
             logger.error(f"查看用户 {user_id} 黑名单信息时出错：{e}")
             yield event.plain_result("查看用户黑名单信息时出错。")
 
+
+
     @filter.llm_tool(name="block_user")
     async def add_to_block_user(
-        self, event: AstrMessageEvent, duration: int = 0, reason: str = ""
-    ) -> MessageEventResult:
+        self, event: AstrMessageEvent, duration: str = "0", reason: str = ""
+    ) -> AsyncGenerator[MessageEventResult, None]:
         """
         Block a user. All messages from this user will be ignored immediately.
         Use this function when you decide to blacklist a user and cease all contact.
 
         Args:
-            duration (number): The block duration in seconds. Use 0 to make it permanent.
+            duration (string): The block duration in seconds. Use "0" to make it permanent.
             reason (string): The reason for blocking this user.
         """
+        user_id = event.get_sender_id()
         try:
-            user_id = event.get_sender_id()
+            # 在函数内部将字符串转换为整数 ---
+            try:
+                duration_sec = int(duration)
+            except (ValueError, TypeError):
+                # 如果LLM给了一个无法转换的字符串，则默认为0
+                duration_sec = 0
+                logger.warning(
+                    f"LLM 工具 'block_user' 接收到无效的 duration '{duration}'，已默认使用 0 秒。"
+                )
+            # -----------------------------------------
+
             ban_time = datetime.now().isoformat()
             expire_time = None
-            actual_duration = duration
+            actual_duration = duration_sec
 
             # 如果不允许永久黑名单，则使用默认时长
-            if duration == 0 and not self.allow_permanent_blacklist:
+            if duration_sec == 0 and not self.allow_permanent_blacklist:
                 actual_duration = self.max_blacklist_duration
 
             # 超出使用最大时间
@@ -296,11 +311,12 @@ class MyPlugin(Star):
 
             await self.db.add_user(user_id, ban_time, expire_time, reason)
 
+            # --- 关键修改：使用 yield event.plain_result ---
             if actual_duration > 0:
-                return f"用户 {user_id} 已被加入黑名单，时长 {actual_duration} 秒"
+                yield event.plain_result(f"用户 {user_id} 已被加入黑名单，时长 {actual_duration} 秒。")
             else:
-                return f"用户 {user_id} 已被永久加入黑名单"
+                yield event.plain_result(f"用户 {user_id} 已被永久加入黑名单。")
 
         except Exception as e:
             logger.error(f"添加用户 {user_id} 到黑名单时出错：{e}")
-            return "添加用户到黑名单时出错"
+            yield event.plain_result("添加用户到黑名单时出错。")
