@@ -1,4 +1,4 @@
-# AstrBot 黑名单工具插件
+8# AstrBot 黑名单工具插件
 
 一个为 AstrBot 设计的黑名单管理插件，允许管理员和 LLM 将用户添加到黑名单中，阻止他们的消息。
 
@@ -85,12 +85,12 @@ allow_permanent_blacklist: true  # 是否允许永久黑名单，默认为true
 
 插件提供了一个 LLM 工具，允许 LLM 进行拉黑操作：
 
-#### add_to_blacklist
+#### add_to_block_user
 
 将用户添加到黑名单：
 
 ```python
-add_to_blacklist(user_id, duration=0, reason="")
+add_to_block_user(user_id, duration=0, reason="")
 ```
 
 参数：
