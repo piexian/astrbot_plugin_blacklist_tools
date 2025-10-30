@@ -311,7 +311,7 @@ class MyPlugin(Star):
 
             await self.db.add_user(user_id, ban_time, expire_time, reason)
 
-            # --- 关键修改：使用 yield event.plain_result ---
+            # 修改：使用 yield event.plain_result 使拉黑的时候做出相应提示
             if actual_duration > 0:
                 yield event.plain_result(f"用户 {user_id} 已被加入黑名单，时长 {actual_duration} 秒。")
             else:
