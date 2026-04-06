@@ -2,7 +2,8 @@ import asyncio
 import base64
 import io
 import os
-from typing import Optional, Tuple, Dict
+from typing import Dict, Optional, Tuple
+
 from astrbot.api import logger
 from PIL import Image, ImageDraw, ImageFont
 
@@ -80,18 +81,17 @@ class TextToImageConverter:
             # 加载字体
             font = self._load_font(font_size)
 
-            lines = text.strip().split("\n")
-
-            # 计算文本尺寸
-            line_height = font_size + line_spacing
-            text_height = len(lines) * line_height
-            max_line_width = self._calculate_text_width(lines, font)
-
-            # 计算图片尺寸
+            raw_lines = text.strip().split("\n")
+            max_line_width = self._calculate_text_width(raw_lines, font)
             if width is None:
                 calculated_width = max_line_width + padding * 2
                 width = max(min_width, min(calculated_width, max_width))
 
+            wrapped_lines = self._wrap_lines(raw_lines, font, width - padding * 2)
+
+            # 计算文本尺寸
+            line_height = font_size + line_spacing
+            text_height = len(wrapped_lines) * line_height
             img_height = max(
                 text_height + padding * 2, font_size + padding * 2
             )  # 确保最小高度
@@ -102,7 +102,7 @@ class TextToImageConverter:
 
             # 绘制文本
             y = padding
-            for line in lines:
+            for line in wrapped_lines:
                 if line.strip():
                     draw.text((padding, y), line, font=font, fill=font_color)
                 y += line_height
@@ -145,6 +145,47 @@ class TextToImageConverter:
             )
 
         return max_line_width
+
+    def _wrap_lines(
+        self,
+        lines: list[str],
+        font: ImageFont.FreeTypeFont,
+        max_width: int,
+    ) -> list[str]:
+        if max_width <= 0:
+            return lines
+
+        wrapped_lines: list[str] = []
+        for line in lines:
+            if not line:
+                wrapped_lines.append("")
+                continue
+            wrapped_lines.extend(self._wrap_single_line(line, font, max_width))
+        return wrapped_lines or [""]
+
+    def _wrap_single_line(
+        self,
+        line: str,
+        font: ImageFont.FreeTypeFont,
+        max_width: int,
+    ) -> list[str]:
+        if font.getlength(line) <= max_width:
+            return [line]
+
+        wrapped: list[str] = []
+        current = ""
+        for char in line:
+            candidate = f"{current}{char}"
+            if current and font.getlength(candidate) > max_width:
+                wrapped.append(current.rstrip())
+                current = char.lstrip()
+                continue
+            current = candidate
+
+        if current:
+            wrapped.append(current.rstrip())
+
+        return wrapped or [line]
 
     async def async_text_to_image(
         self,
