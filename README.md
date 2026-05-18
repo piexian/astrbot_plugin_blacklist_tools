@@ -2,12 +2,7 @@
 
 一个面向 AstrBot 的黑名单管理插件。管理员可以直接管理黑名单，LLM 也可以按工具调用规则执行封禁；被拉黑用户的消息会被统一拦截。
 
-当前仓库信息：
-
-- 插件名：`astrbot_plugin_blacklist_tools`
-- 作者：`piexian`
-- 仓库：`https://github.com/piexian/astrbot_plugin_blacklist_tools`
-- 当前仓库基于 `https://github.com/ctrlkk/astrbot_plugin_blacklist_tools` 改版并持续维护。
+- 当前仓库基于 `https://github.com/ctrlkk/astrbot_plugin_blacklist_tools` 改版。
 
 ## 功能特性
 
